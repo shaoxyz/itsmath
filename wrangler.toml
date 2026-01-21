@@ -1,0 +1,7 @@
+name = "itsmath"
+main = "src/worker.js"
+compatibility_date = "2024-01-01"
+
+# Static assets configuration for Workers
+[assets]
+directory = "./dist"
