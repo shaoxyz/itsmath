@@ -28,19 +28,19 @@ class SlimePhysics {
     this.tilt = { x: 0, z: 0 };
     
     this.config = {
-      surfaceStiffness: 60,
-      surfaceDamping: 4,
-      structureStiffness: 120,
-      structureDamping: 4,
-      volumeStiffness: 350,
+      surfaceStiffness: 35,
+      surfaceDamping: 3,
+      structureStiffness: 60,
+      structureDamping: 3,
+      volumeStiffness: 200,
       targetVolume: 0,
-      linearDamping: 0.95,
-      groundFriction: 0.85,
-      wallBounce: 0.45,
-      shapeRecovery: 0.15,
-      pressForce: 60,
-      pressRadius: 1.8,
-      gravity: -10,
+      linearDamping: 0.96,
+      groundFriction: 0.82,
+      wallBounce: 0.5,
+      shapeRecovery: 0.06,
+      pressForce: 80,
+      pressRadius: 2.0,
+      gravity: -12,
     };
     
     this.pressPoints = [];
@@ -379,10 +379,10 @@ export default function SlimeToyGame() {
   const animationRef = useRef(null);
   
   const [slimeColor, setSlimeColor] = useState('#7FE5A0');
-  const [isPressed, setIsPressed] = useState(false);
   const [squishLevel, setSquishLevel] = useState(0);
   const [jiggleLevel, setJiggleLevel] = useState(0);
   const [gyroEnabled, setGyroEnabled] = useState(false);
+  const isPressedRef = useRef(false);
   
   const pressRef = useRef([]);
   const baseRef = useRef([]);
@@ -687,7 +687,7 @@ export default function SlimeToyGame() {
     }
     lastTapRef.current = now;
     
-    setIsPressed(true);
+    isPressedRef.current = true;
     haptic('squish');
     
     const pos = toWorld(clientX, clientY);
@@ -696,15 +696,15 @@ export default function SlimeToyGame() {
 
   const onMove = useCallback((clientX, clientY, e) => {
     prevent(e);
-    if (!isPressed) return;
+    if (!isPressedRef.current) return;
     
     const pos = toWorld(clientX, clientY);
     if (pos) pressRef.current = [{ ...pos, strength: 0.9 }];
-  }, [isPressed, toWorld, prevent]);
+  }, [toWorld, prevent]);
 
   const onUp = useCallback((e) => {
     prevent(e);
-    setIsPressed(false);
+    isPressedRef.current = false;
     pressRef.current = [];
     haptic('pop');
   }, [haptic, prevent]);
@@ -733,7 +733,7 @@ export default function SlimeToyGame() {
 
   const handleTouchMove = useCallback((e) => {
     prevent(e);
-    if (!isPressed) return;
+    if (!isPressedRef.current) return;
     
     const pts = Array.from(e.touches).map(t => {
       const pos = toWorld(t.clientX, t.clientY);
@@ -836,8 +836,6 @@ export default function SlimeToyGame() {
           width: '100%',
           maxWidth: '360px',
           aspectRatio: '1',
-          transform: isPressed ? 'scale(0.99)' : 'scale(1)',
-          transition: 'transform 0.12s ease-out',
           boxShadow: `0 15px 30px -8px rgba(0,0,0,0.5), 0 0 50px ${slimeColor}08`,
         }}
         onMouseDown={handleMouseDown}
