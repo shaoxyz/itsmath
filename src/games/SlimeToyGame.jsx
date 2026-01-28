@@ -124,7 +124,7 @@ class SlimePhysicsWorld {
   }
 
   applyAcceleration(ax, ay, az) {
-    const impulseScale = 0.15;
+    const impulseScale = 0.03;
     for (const p of this.particles) {
       p.body.applyImpulse({
         x: -ax * impulseScale,
@@ -517,32 +517,39 @@ export default function SlimeToyGame() {
   }, []);
 
   const enableSensors = useCallback(async () => {
+    let initialOrientation = null;
+    
     const orientationHandler = (e) => {
-      if (e.alpha === null) return;
+      if (e.beta === null || e.gamma === null) return;
       
-      const euler = new THREE.Euler(
-        THREE.MathUtils.degToRad(e.beta || 0),
-        THREE.MathUtils.degToRad(e.alpha || 0),
-        THREE.MathUtils.degToRad(-(e.gamma || 0)),
-        'YXZ'
-      );
+      const beta = e.beta || 0;
+      const gamma = e.gamma || 0;
       
-      const screenOrientation = window.orientation || 0;
-      const adjustedEuler = new THREE.Euler(
-        euler.x - Math.PI / 2,
-        euler.y,
-        euler.z + THREE.MathUtils.degToRad(screenOrientation),
-        'YXZ'
-      );
+      if (initialOrientation === null) {
+        initialOrientation = { beta, gamma };
+        return;
+      }
       
-      targetOrientationRef.current.setFromEuler(adjustedEuler);
+      const relativeBeta = (beta - initialOrientation.beta) * 0.02;
+      const relativeGamma = (gamma - initialOrientation.gamma) * 0.02;
+      
+      const clampedBeta = Math.max(-0.5, Math.min(0.5, relativeBeta));
+      const clampedGamma = Math.max(-0.5, Math.min(0.5, relativeGamma));
+      
+      const euler = new THREE.Euler(clampedBeta, 0, -clampedGamma, 'XYZ');
+      targetOrientationRef.current.setFromEuler(euler);
     };
 
     const motionHandler = (e) => {
       const acc = e.accelerationIncludingGravity;
       if (!acc || acc.x === null) return;
       
-      const threshold = 2;
+      if (lastAccelRef.current.x === 0 && lastAccelRef.current.y === 0) {
+        lastAccelRef.current = { x: acc.x, y: acc.y, z: acc.z };
+        return;
+      }
+      
+      const threshold = 5;
       const dx = acc.x - lastAccelRef.current.x;
       const dy = acc.y - lastAccelRef.current.y;
       const dz = acc.z - lastAccelRef.current.z;
@@ -550,9 +557,10 @@ export default function SlimeToyGame() {
       const magnitude = Math.sqrt(dx * dx + dy * dy + dz * dz);
       
       if (magnitude > threshold && physicsRef.current) {
-        physicsRef.current.applyAcceleration(dx, dy, dz);
-        if (magnitude > 8) haptic('impact');
-        else if (magnitude > 4) haptic('shake');
+        const scale = Math.min(magnitude / 20, 1);
+        physicsRef.current.applyAcceleration(dx * scale, dy * scale, dz * scale);
+        if (magnitude > 15) haptic('impact');
+        else if (magnitude > 8) haptic('shake');
       }
       
       lastAccelRef.current = { x: acc.x, y: acc.y, z: acc.z };
