@@ -18,10 +18,9 @@ class SlimePhysics {
     this.springs = [];
     this.center = { x: 0, y: 0, z: 0 };
     
-    // 盒子边界
     this.bounds = {
-      minX: -1.8, maxX: 1.8,
-      minZ: -1.8, maxZ: 1.8,
+      minX: -1.6, maxX: 1.6,
+      minZ: -1.6, maxZ: 1.6,
       groundY: 0,
     };
     
@@ -306,9 +305,9 @@ class SlimePhysics {
     const b = this.bounds;
     const bounce = this.config.wallBounce;
     const fric = this.config.groundFriction;
+    const margin = 0.05;
     
     for (const p of this.particles) {
-      // 地面
       if (p.pos.y < b.groundY) {
         p.pos.y = b.groundY;
         p.vel.y *= -bounce * 0.4;
@@ -316,13 +315,23 @@ class SlimePhysics {
         p.vel.z *= fric;
       }
       
-      // 墙壁
-      if (p.pos.x < b.minX) { p.pos.x = b.minX; p.vel.x *= -bounce; }
-      if (p.pos.x > b.maxX) { p.pos.x = b.maxX; p.vel.x *= -bounce; }
-      if (p.pos.z < b.minZ) { p.pos.z = b.minZ; p.vel.z *= -bounce; }
-      if (p.pos.z > b.maxZ) { p.pos.z = b.maxZ; p.vel.z *= -bounce; }
+      if (p.pos.x < b.minX) { 
+        p.pos.x = b.minX + margin; 
+        p.vel.x = Math.abs(p.vel.x) * bounce;
+      }
+      if (p.pos.x > b.maxX) { 
+        p.pos.x = b.maxX - margin; 
+        p.vel.x = -Math.abs(p.vel.x) * bounce;
+      }
+      if (p.pos.z < b.minZ) { 
+        p.pos.z = b.minZ + margin; 
+        p.vel.z = Math.abs(p.vel.z) * bounce;
+      }
+      if (p.pos.z > b.maxZ) { 
+        p.pos.z = b.maxZ - margin; 
+        p.vel.z = -Math.abs(p.vel.z) * bounce;
+      }
       
-      // 顶部
       if (p.pos.y > 1.2) { p.pos.y = 1.2; p.vel.y *= -0.2; }
     }
   }
