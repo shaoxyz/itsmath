@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 
 const VERTEX_SHADER = `
   attribute vec2 a_position;
@@ -104,7 +104,6 @@ function createShader(gl, type, source) {
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    console.error('Shader compile error:', gl.getShaderInfoLog(shader));
     gl.deleteShader(shader);
     return null;
   }
@@ -117,7 +116,6 @@ function createProgram(gl, vertexShader, fragmentShader) {
   gl.attachShader(program, fragmentShader);
   gl.linkProgram(program);
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    console.error('Program link error:', gl.getProgramInfoLog(program));
     gl.deleteProgram(program);
     return null;
   }
@@ -127,11 +125,10 @@ function createProgram(gl, vertexShader, fragmentShader) {
 export default function SlimeToyThumbnail({ className = '' }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
-  const glRef = useRef(null);
-  const programRef = useRef(null);
+  const resourcesRef = useRef(null);
   const animationRef = useRef(null);
-  const locationsRef = useRef(null);
   const sizeRef = useRef({ width: 300, height: 225 });
+  const [webglFailed, setWebglFailed] = useState(false);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -140,31 +137,27 @@ export default function SlimeToyThumbnail({ className = '' }) {
 
     const gl = canvas.getContext('webgl', {
       antialias: false,
-      preserveDrawingBuffer: true
+      preserveDrawingBuffer: false,
+      failIfMajorPerformanceCaveat: false,
     });
 
     if (!gl) {
-      console.error('WebGL not supported');
+      setWebglFailed(true);
       return;
     }
 
-    glRef.current = gl;
-
     const vertexShader = createShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
     const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
-    if (!vertexShader || !fragmentShader) return;
+    if (!vertexShader || !fragmentShader) {
+      setWebglFailed(true);
+      return;
+    }
 
     const program = createProgram(gl, vertexShader, fragmentShader);
-    if (!program) return;
-
-    programRef.current = program;
-
-    const locations = {
-      position: gl.getAttribLocation(program, 'a_position'),
-      resolution: gl.getUniformLocation(program, 'u_resolution'),
-      time: gl.getUniformLocation(program, 'u_time'),
-    };
-    locationsRef.current = locations;
+    if (!program) {
+      setWebglFailed(true);
+      return;
+    }
 
     const positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -172,15 +165,22 @@ export default function SlimeToyThumbnail({ className = '' }) {
       -1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1,
     ]), gl.STATIC_DRAW);
 
-    gl.enableVertexAttribArray(locations.position);
-    gl.vertexAttribPointer(locations.position, 2, gl.FLOAT, false, 0, 0);
+    const positionLoc = gl.getAttribLocation(program, 'a_position');
+    gl.enableVertexAttribArray(positionLoc);
+    gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
+
+    const locations = {
+      resolution: gl.getUniformLocation(program, 'u_resolution'),
+      time: gl.getUniformLocation(program, 'u_time'),
+    };
+
+    resourcesRef.current = { gl, program, vertexShader, fragmentShader, positionBuffer, locations };
 
     const updateSize = () => {
       const dpr = Math.min(window.devicePixelRatio, 2);
       const rect = container.getBoundingClientRect();
       const width = Math.floor(rect.width * dpr);
       const height = Math.floor(rect.height * dpr);
-
       if (canvas.width !== width || canvas.height !== height) {
         canvas.width = width;
         canvas.height = height;
@@ -195,15 +195,18 @@ export default function SlimeToyThumbnail({ className = '' }) {
     let startTime = performance.now();
 
     const render = () => {
+      const res = resourcesRef.current;
+      if (!res) return;
+
       const time = (performance.now() - startTime) / 1000;
       const { width, height } = sizeRef.current;
 
-      gl.viewport(0, 0, width, height);
-      gl.useProgram(program);
-      gl.uniform2f(locations.resolution, width, height);
-      gl.uniform1f(locations.time, time);
+      res.gl.viewport(0, 0, width, height);
+      res.gl.useProgram(res.program);
+      res.gl.uniform2f(res.locations.resolution, width, height);
+      res.gl.uniform1f(res.locations.time, time);
+      res.gl.drawArrays(res.gl.TRIANGLES, 0, 6);
 
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
       animationRef.current = requestAnimationFrame(render);
     };
 
@@ -213,23 +216,28 @@ export default function SlimeToyThumbnail({ className = '' }) {
       resizeObserver.disconnect();
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
       }
-      if (gl && program) {
-        gl.deleteProgram(program);
+      const res = resourcesRef.current;
+      if (res) {
+        res.gl.deleteBuffer(res.positionBuffer);
+        res.gl.deleteProgram(res.program);
+        res.gl.deleteShader(res.vertexShader);
+        res.gl.deleteShader(res.fragmentShader);
+        const ext = res.gl.getExtension('WEBGL_lose_context');
+        if (ext) ext.loseContext();
+        resourcesRef.current = null;
       }
-      if (gl && vertexShader) {
-        gl.deleteShader(vertexShader);
-      }
-      if (gl && fragmentShader) {
-        gl.deleteShader(fragmentShader);
-      }
-      if (gl && positionBuffer) {
-        gl.deleteBuffer(positionBuffer);
-      }
-      const ext = gl?.getExtension('WEBGL_lose_context');
-      if (ext) ext.loseContext();
     };
   }, []);
+
+  if (webglFailed) {
+    return (
+      <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-green-900 to-emerald-900 ${className}`}>
+        <div className="text-4xl">🫠</div>
+      </div>
+    );
+  }
 
   return (
     <div ref={containerRef} className={`w-full h-full ${className}`}>
