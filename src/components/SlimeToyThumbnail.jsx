@@ -214,6 +214,20 @@ export default function SlimeToyThumbnail({ className = '' }) {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
+      if (gl && program) {
+        gl.deleteProgram(program);
+      }
+      if (gl && vertexShader) {
+        gl.deleteShader(vertexShader);
+      }
+      if (gl && fragmentShader) {
+        gl.deleteShader(fragmentShader);
+      }
+      if (gl && positionBuffer) {
+        gl.deleteBuffer(positionBuffer);
+      }
+      const ext = gl?.getExtension('WEBGL_lose_context');
+      if (ext) ext.loseContext();
     };
   }, []);
 
