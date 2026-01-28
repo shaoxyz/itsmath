@@ -1,13 +1,3 @@
-/**
- * SlimeToyGame.jsx - 史莱姆玩具游戏
- * 
- * 基于软体物理的交互式史莱姆玩具
- * - 按压挤扁
- * - 倾斜滚动（陀螺仪）
- * - 双击弹跳
- * - 多指触控
- */
-
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
 
@@ -28,19 +18,19 @@ class SlimePhysics {
     this.tilt = { x: 0, z: 0 };
     
     this.config = {
-      surfaceStiffness: 60,
-      surfaceDamping: 4,
-      structureStiffness: 120,
-      structureDamping: 4,
-      volumeStiffness: 350,
+      surfaceStiffness: 50,
+      surfaceDamping: 6,
+      structureStiffness: 100,
+      structureDamping: 5,
+      volumeStiffness: 300,
       targetVolume: 0,
-      linearDamping: 0.95,
-      groundFriction: 0.85,
-      wallBounce: 0.45,
-      shapeRecovery: 0.15,
-      pressForce: 60,
-      pressRadius: 1.8,
-      gravity: -10,
+      linearDamping: 0.93,
+      groundFriction: 0.88,
+      wallBounce: 0.35,
+      shapeRecovery: 0.1,
+      pressForce: 30,
+      pressRadius: 1.5,
+      gravity: -8,
     };
     
     this.pressPoints = [];
@@ -151,7 +141,7 @@ class SlimePhysics {
   clearPress() {
     this.pressPoints = [];
     for (const p of this.particles) {
-      p.pressure *= 0.7;
+      p.pressure *= 0.85;
     }
   }
 
@@ -193,14 +183,14 @@ class SlimePhysics {
         
         if (hDist < cfg.pressRadius) {
           const t = 1 - hDist / cfg.pressRadius;
-          const strength = Math.pow(t, 0.4) * press.strength;
+          const strength = Math.pow(t, 0.5) * press.strength;
           
           // 向下压
-          p.vel.y -= strength * cfg.pressForce * 0.015;
+          p.vel.y -= strength * cfg.pressForce * 0.008;
           
           // 向外挤
           if (hDist > 0.01) {
-            const outF = strength * cfg.pressForce * 0.004;
+            const outF = strength * cfg.pressForce * 0.002;
             p.vel.x += (dx / hDist) * outF;
             p.vel.z += (dz / hDist) * outF;
           }
@@ -369,7 +359,7 @@ class SlimePhysics {
 }
 
 // ========== 主组件 ==========
-export default function SlimeToyGame() {
+export default function SlimeToyTopDown() {
   const containerRef = useRef(null);
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
@@ -426,7 +416,7 @@ export default function SlimeToyGame() {
 
     // 场景
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a24);
+    scene.background = new THREE.Color(0x0c0c10);
     sceneRef.current = scene;
 
     // 俯视相机
@@ -451,22 +441,22 @@ export default function SlimeToyGame() {
     rendererRef.current = renderer;
 
     // 光照
-    scene.add(new THREE.AmbientLight(0x8090a0, 1.2));
+    scene.add(new THREE.AmbientLight(0x606080, 0.8));
     
-    const topLight = new THREE.DirectionalLight(0xffffff, 1.8);
+    const topLight = new THREE.DirectionalLight(0xffffff, 1.0);
     topLight.position.set(2, 8, 2);
     topLight.castShadow = true;
     topLight.shadow.mapSize.width = 512;
     topLight.shadow.mapSize.height = 512;
     scene.add(topLight);
 
-    scene.add(new THREE.PointLight(0x88aaff, 0.6, 10).translateX(-2).translateY(4).translateZ(-2));
-    scene.add(new THREE.PointLight(0xffaa88, 0.5, 10).translateX(2).translateY(4).translateZ(2));
+    scene.add(new THREE.PointLight(0x8888ff, 0.3, 8).translateX(-2).translateY(3).translateZ(-2));
+    scene.add(new THREE.PointLight(0xff8888, 0.2, 8).translateX(2).translateY(3).translateZ(2));
 
     // 托盘底部
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(4, 4),
-      new THREE.MeshStandardMaterial({ color: 0x252530, roughness: 0.8 })
+      new THREE.MeshStandardMaterial({ color: 0x151518, roughness: 0.9 })
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.01;
@@ -474,7 +464,7 @@ export default function SlimeToyGame() {
     scene.add(floor);
 
     // 托盘边框
-    const edgeMat = new THREE.MeshStandardMaterial({ color: 0x3a3a48, roughness: 0.5 });
+    const edgeMat = new THREE.MeshStandardMaterial({ color: 0x252530, roughness: 0.6 });
     const edgeH = 0.3;
     const edgeW = 0.15;
     const halfSize = 2;
@@ -511,16 +501,14 @@ export default function SlimeToyGame() {
     const slimeMat = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(slimeColor),
       metalness: 0,
-      roughness: 0.08,
-      transmission: 0.4,
-      thickness: 1.0,
-      ior: 1.45,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.05,
+      roughness: 0.1,
+      transmission: 0.55,
+      thickness: 1.2,
+      ior: 1.4,
+      clearcoat: 0.9,
+      clearcoatRoughness: 0.1,
       transparent: true,
-      opacity: 0.92,
-      emissive: new THREE.Color(slimeColor),
-      emissiveIntensity: 0.08,
+      opacity: 0.9,
     });
 
     const slime = new THREE.Mesh(slimeGeo, slimeMat);
@@ -788,57 +776,101 @@ export default function SlimeToyGame() {
   }, [haptic]);
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
-      {/* 标题 */}
-      <div className="mb-3 text-center">
-        <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-500 mb-1">
-          Slime Tray
-        </h1>
-        <p className="text-gray-500 text-xs mb-2">
-          按压挤扁 · 倾斜滚动 · 双击弹跳
-        </p>
-      </div>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(180deg, #08080c 0%, #0e0e14 100%)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      padding: '12px',
+      fontFamily: 'system-ui, sans-serif',
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
+      WebkitTouchCallout: 'none',
+      touchAction: 'none',
+    }}
+    onContextMenu={prevent}
+    >
+      <h1 style={{
+        color: '#fff',
+        fontSize: '24px',
+        fontWeight: '700',
+        margin: '0 0 4px 0',
+        textShadow: `0 0 30px ${slimeColor}30`,
+      }}>
+        🫠 史莱姆托盘
+      </h1>
+      
+      <p style={{
+        color: 'rgba(255,255,255,0.35)',
+        fontSize: '11px',
+        margin: '0 0 12px 0',
+      }}>
+        按压挤扁 · 倾斜滚动 · 双击弹跳
+      </p>
 
-      {/* 状态指示器 */}
-      <div className="flex gap-3 mb-3">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800/60 rounded-lg">
-          <span className="text-xs">🤏</span>
-          <div className="w-12 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-            <div 
-              className="h-full rounded-full transition-all duration-100"
-              style={{ 
-                width: `${squishLevel * 100}%`,
-                background: slimeColor 
-              }} 
-            />
+      {/* 状态 */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          padding: '5px 10px',
+          background: 'rgba(255,255,255,0.04)',
+          borderRadius: '8px',
+        }}>
+          <span style={{ fontSize: '11px' }}>🤏</span>
+          <div style={{
+            width: '45px', height: '4px',
+            background: 'rgba(255,255,255,0.1)',
+            borderRadius: '2px',
+          }}>
+            <div style={{
+              width: `${squishLevel * 100}%`,
+              height: '100%',
+              background: slimeColor,
+              borderRadius: '2px',
+              transition: 'width 0.1s',
+            }} />
           </div>
         </div>
         
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800/60 rounded-lg">
-          <span className="text-xs">〰️</span>
-          <div className="w-12 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-            <div 
-              className="h-full rounded-full transition-all duration-100"
-              style={{ 
-                width: `${jiggleLevel * 100}%`,
-                background: 'linear-gradient(90deg, #88f, #f8f)' 
-              }} 
-            />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          padding: '5px 10px',
+          background: 'rgba(255,255,255,0.04)',
+          borderRadius: '8px',
+        }}>
+          <span style={{ fontSize: '11px' }}>〰️</span>
+          <div style={{
+            width: '45px', height: '4px',
+            background: 'rgba(255,255,255,0.1)',
+            borderRadius: '2px',
+          }}>
+            <div style={{
+              width: `${jiggleLevel * 100}%`,
+              height: '100%',
+              background: 'linear-gradient(90deg, #88f, #f8f)',
+              borderRadius: '2px',
+              transition: 'width 0.1s',
+            }} />
           </div>
         </div>
       </div>
 
-      {/* 游戏画布 */}
+      {/* 画布 */}
       <div
         ref={containerRef}
-        className="rounded-xl overflow-hidden shadow-2xl border border-gray-700"
         style={{
           width: '100%',
           maxWidth: '360px',
           aspectRatio: '1',
+          borderRadius: '20px',
+          overflow: 'hidden',
+          boxShadow: `
+            0 15px 30px -8px rgba(0,0,0,0.5),
+            0 0 50px ${slimeColor}08
+          `,
           transform: isPressed ? 'scale(0.99)' : 'scale(1)',
           transition: 'transform 0.12s ease-out',
-          boxShadow: `0 15px 30px -8px rgba(0,0,0,0.5), 0 0 50px ${slimeColor}08`,
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -848,61 +880,84 @@ export default function SlimeToyGame() {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
-        onContextMenu={prevent}
       />
 
-      {/* 控制按钮 */}
-      <div className="flex gap-2 mt-4">
-        <button 
-          onClick={enableGyro} 
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-            gyroEnabled 
-              ? 'bg-green-600/20 text-green-400 border border-green-500/30' 
-              : 'bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30'
-          }`}
-        >
+      {/* 按钮 */}
+      <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+        <button onClick={enableGyro} style={{
+          padding: '8px 14px',
+          background: gyroEnabled ? 'rgba(100,200,100,0.2)' : 'rgba(100,140,255,0.15)',
+          borderRadius: '10px',
+          border: `1px solid ${gyroEnabled ? 'rgba(100,200,100,0.4)' : 'rgba(100,140,255,0.3)'}`,
+          color: gyroEnabled ? '#8f8' : '#8af',
+          fontSize: '12px',
+          fontWeight: '600',
+          cursor: 'pointer',
+        }}>
           📱 {gyroEnabled ? '陀螺仪已启用' : '启用陀螺仪'}
         </button>
         
-        <button 
-          onClick={reset} 
-          className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm font-medium transition border border-gray-700"
-        >
+        <button onClick={reset} style={{
+          padding: '8px 14px',
+          background: 'rgba(255,255,255,0.05)',
+          borderRadius: '10px',
+          border: '1px solid rgba(255,255,255,0.1)',
+          color: 'rgba(255,255,255,0.6)',
+          fontSize: '12px',
+          fontWeight: '600',
+          cursor: 'pointer',
+        }}>
           ↺ 重置
         </button>
       </div>
 
-      {/* 颜色选择器 */}
-      <div className="flex gap-3 mt-4 p-3 bg-gray-800/40 rounded-xl">
+      {/* 颜色 */}
+      <div style={{
+        display: 'flex', gap: '10px', marginTop: '16px',
+        padding: '12px 18px',
+        background: 'rgba(255,255,255,0.02)',
+        borderRadius: '16px',
+      }}>
         {colors.map(c => (
           <button
             key={c.value}
             onClick={() => { setSlimeColor(c.value); haptic('light'); }}
-            className="w-9 h-9 rounded-full transition-all hover:scale-110"
             style={{
+              width: '36px', height: '36px',
+              borderRadius: '50%',
               background: `radial-gradient(circle at 30% 30%, white 0%, ${c.value} 50%, ${c.emissive} 100%)`,
+              border: 'none',
               outline: slimeColor === c.value ? '2px solid white' : 'none',
               outlineOffset: '2px',
+              cursor: 'pointer',
               transform: slimeColor === c.value ? 'scale(1.1)' : 'scale(1)',
+              transition: 'all 0.15s ease',
               boxShadow: `0 3px 10px ${c.emissive}30`,
             }}
           />
         ))}
       </div>
 
-      {/* 操作提示 */}
-      <div className="flex gap-2 mt-4 flex-wrap justify-center">
+      {/* 提示 */}
+      <div style={{
+        display: 'flex', gap: '6px', marginTop: '14px', flexWrap: 'wrap', justifyContent: 'center',
+      }}>
         {['👆 按压', '📱 倾斜', '👆👆 双击', '🤏 多指'].map((t, i) => (
-          <span 
-            key={i} 
-            className="px-2 py-1 bg-gray-800/40 rounded text-xs text-gray-500"
-          >
-            {t}
-          </span>
+          <span key={i} style={{
+            padding: '4px 8px',
+            background: 'rgba(255,255,255,0.03)',
+            borderRadius: '6px',
+            fontSize: '10px',
+            color: 'rgba(255,255,255,0.35)',
+          }}>{t}</span>
         ))}
       </div>
 
-      <p className="mt-4 text-xs text-gray-600">
+      <p style={{
+        marginTop: '16px',
+        fontSize: '9px',
+        color: 'rgba(255,255,255,0.1)',
+      }}>
         SLIME TRAY v1.1
       </p>
     </div>

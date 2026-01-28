@@ -296,7 +296,8 @@ export class GameEngine {
    * 更新分块
    */
   updateChunks(player) {
-    const viewRadius = (CANVAS.SIZE / 2) / this.zoom + 150;
+    // 使用比渲染可见范围更大的加载范围，确保元素在进入视图前就已生成
+    const viewRadius = (CANVAS.SIZE / 2) / this.zoom + RENDERING.VIEW_BUFFER + CHUNK.LOAD_EXTRA_BUFFER;
 
     // 加载新分块
     const toLoad = this.chunkManager.getChunksToLoad(this.camera.x, this.camera.y, viewRadius);
