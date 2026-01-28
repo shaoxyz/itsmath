@@ -740,7 +740,7 @@ export default function SlimeToyGame() {
       return pos ? { ...pos, strength: 0.9 } : null;
     }).filter(Boolean);
     pressRef.current = pts;
-  }, [isPressed, toWorld, prevent]);
+  }, [toWorld, prevent]);
 
   const handleTouchEnd = useCallback((e) => {
     prevent(e);
