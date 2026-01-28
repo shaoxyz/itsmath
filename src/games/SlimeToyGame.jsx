@@ -433,9 +433,8 @@ export default function SlimeToyGame() {
     const w = container.clientWidth;
     const h = container.clientHeight;
 
-    // 场景
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a24);
+    scene.background = new THREE.Color(0x2a2a38);
     sceneRef.current = scene;
 
     // 俯视相机
@@ -459,31 +458,32 @@ export default function SlimeToyGame() {
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // 光照
-    scene.add(new THREE.AmbientLight(0x8090a0, 1.2));
+    scene.add(new THREE.AmbientLight(0xc0d0e0, 1.8));
     
-    const topLight = new THREE.DirectionalLight(0xffffff, 1.8);
+    const topLight = new THREE.DirectionalLight(0xffffff, 2.5);
     topLight.position.set(2, 8, 2);
     topLight.castShadow = true;
     topLight.shadow.mapSize.width = 512;
     topLight.shadow.mapSize.height = 512;
     scene.add(topLight);
 
-    scene.add(new THREE.PointLight(0x88aaff, 0.6, 10).translateX(-2).translateY(4).translateZ(-2));
-    scene.add(new THREE.PointLight(0xffaa88, 0.5, 10).translateX(2).translateY(4).translateZ(2));
+    const fillLight = new THREE.DirectionalLight(0xffeedd, 1.0);
+    fillLight.position.set(-3, 6, -1);
+    scene.add(fillLight);
 
-    // 托盘底部
+    scene.add(new THREE.PointLight(0xaaccff, 1.0, 12).translateX(-2).translateY(5).translateZ(-2));
+    scene.add(new THREE.PointLight(0xffccaa, 0.8, 12).translateX(2).translateY(5).translateZ(2));
+
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(4, 4),
-      new THREE.MeshStandardMaterial({ color: 0x252530, roughness: 0.8 })
+      new THREE.MeshStandardMaterial({ color: 0x404050, roughness: 0.7 })
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.01;
     floor.receiveShadow = true;
     scene.add(floor);
 
-    // 托盘边框
-    const edgeMat = new THREE.MeshStandardMaterial({ color: 0x3a3a48, roughness: 0.5 });
+    const edgeMat = new THREE.MeshStandardMaterial({ color: 0x5a5a6a, roughness: 0.4 });
     const edgeH = 0.3;
     const edgeW = 0.15;
     const halfSize = 2;
@@ -519,17 +519,20 @@ export default function SlimeToyGame() {
     
     const slimeMat = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(slimeColor),
-      metalness: 0,
-      roughness: 0.08,
-      transmission: 0.4,
-      thickness: 1.0,
-      ior: 1.45,
+      metalness: 0.05,
+      roughness: 0.05,
+      transmission: 0.3,
+      thickness: 0.8,
+      ior: 1.5,
       clearcoat: 1.0,
-      clearcoatRoughness: 0.05,
+      clearcoatRoughness: 0.02,
       transparent: true,
-      opacity: 0.92,
+      opacity: 0.95,
       emissive: new THREE.Color(slimeColor),
-      emissiveIntensity: 0.08,
+      emissiveIntensity: 0.15,
+      sheen: 1.0,
+      sheenRoughness: 0.3,
+      sheenColor: new THREE.Color(0xffffff),
     });
 
     const slime = new THREE.Mesh(slimeGeo, slimeMat);
