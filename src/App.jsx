@@ -25,7 +25,7 @@ const games = [
 
 function HomePage() {
   return (
-    <div className="min-h-screen bg-gray-900 py-12 px-4">
+    <div className="min-h-screen bg-gray-900 py-12 px-4 select-none" style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}>
       <div className="max-w-4xl mx-auto">
         <header className="text-center mb-12">
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mb-4">

@@ -788,7 +788,7 @@ export default function SlimeToyGame() {
   }, [haptic]);
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4 select-none" style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}>
       {/* 标题 */}
       <div className="mb-3 text-center">
         <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-500 mb-1">

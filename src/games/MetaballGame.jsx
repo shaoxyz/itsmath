@@ -42,8 +42,6 @@ export default function MetaballGame() {
   const [gameState, setGameState] = useState('menu');
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
-  const [milestone, setMilestone] = useState(null);
-  const [hasGravity, setHasGravity] = useState(false);
 
   // ============================================================
   // 初始化游戏系统
@@ -66,17 +64,6 @@ export default function MetaballGame() {
         setHighScore(h => Math.max(h, highScore));
       });
 
-      // 里程碑事件（教育反馈）
-      engineRef.current.on('milestone', (data) => {
-        setMilestone(data);
-        // 3秒后自动隐藏
-        setTimeout(() => setMilestone(null), 3000);
-      });
-
-      // 引力激活事件
-      engineRef.current.on('gravityActivated', () => {
-        setHasGravity(true);
-      });
     }
 
     // 初始化 WebGL 渲染器
@@ -120,8 +107,6 @@ export default function MetaballGame() {
     engine.lastTime = performance.now();
 
     setScore(0);
-    setMilestone(null);
-    setHasGravity(false);
   }, [initializeSystems]);
 
   // ============================================================
@@ -219,7 +204,7 @@ export default function MetaballGame() {
   // 渲染 UI
   // ============================================================
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4 select-none" style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}>
       {/* 标题和分数 */}
       <div className="mb-3 text-center">
         <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 mb-1">
@@ -272,24 +257,9 @@ export default function MetaballGame() {
           </button>
         )}
 
-        {/* 里程碑通知（教育反馈） */}
-        {milestone && (
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 animate-bounce">
-            <div className="bg-gradient-to-r from-purple-600/90 to-cyan-600/90 text-white px-6 py-4 rounded-xl shadow-2xl backdrop-blur text-center">
-              <div className="text-3xl mb-1">{milestone.icon}</div>
-              <div className="text-lg font-bold">{milestone.title}</div>
-              <div className="text-sm opacity-90">{milestone.message}</div>
-            </div>
-          </div>
-        )}
 
-        {/* 引力状态指示器 */}
-        {gameState === 'playing' && hasGravity && (
-          <div className="absolute top-3 left-3 px-2 py-1 bg-cyan-600/80 text-white text-xs rounded-lg backdrop-blur flex items-center gap-1">
-            <span className="animate-pulse">⚡</span>
-            引力已激活
-          </div>
-        )}
+
+
 
         {/* 菜单界面 */}
         {gameState === 'menu' && (
