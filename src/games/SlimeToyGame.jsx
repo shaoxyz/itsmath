@@ -3,46 +3,53 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { EffectComposer, RenderPass, BloomEffect, EffectPass } from 'postprocessing';
 
-// Rapier 软体史莱姆物理
+// Rapier 软体史莱姆物理 - 盒子中的果冻
 class RapierSlimePhysics {
   constructor() {
     this.world = null;
     this.particles = [];
     this.joints = [];
     this.initialized = false;
-    this.gravity = { x: 0, y: -15, z: 0 };
+    this.baseGravity = 12;
     this.interactionIntensity = 0;
   }
 
   async init() {
     await RAPIER.init();
     
-    this.world = new RAPIER.World({ x: 0, y: -15, z: 0 });
+    this.world = new RAPIER.World({ x: 0, y: -this.baseGravity, z: 0 });
     
-    // 地面
-    const groundDesc = RAPIER.ColliderDesc.cuboid(3, 0.1, 3)
-      .setTranslation(0, -0.1, 0)
-      .setFriction(0.3)
-      .setRestitution(0.2);
+    // 透明盒子边界 - 地面
+    const groundDesc = RAPIER.ColliderDesc.cuboid(2, 0.05, 2)
+      .setTranslation(0, -0.05, 0)
+      .setFriction(0.6)
+      .setRestitution(0.3);
     this.world.createCollider(groundDesc);
     
-    // 四面墙
-    const wallHeight = 1.5;
-    const wallThickness = 0.1;
-    const halfSize = 1.7;
+    // 透明盒子边界 - 顶部
+    const ceilingDesc = RAPIER.ColliderDesc.cuboid(2, 0.05, 2)
+      .setTranslation(0, 1.5, 0)
+      .setFriction(0.3)
+      .setRestitution(0.4);
+    this.world.createCollider(ceilingDesc);
+    
+    // 透明盒子边界 - 四面墙
+    const wallHeight = 0.8;
+    const wallThickness = 0.05;
+    const halfSize = 1.4;
     
     const walls = [
-      { pos: [0, wallHeight/2, -halfSize - wallThickness], size: [halfSize + wallThickness, wallHeight/2, wallThickness] },
-      { pos: [0, wallHeight/2, halfSize + wallThickness], size: [halfSize + wallThickness, wallHeight/2, wallThickness] },
-      { pos: [-halfSize - wallThickness, wallHeight/2, 0], size: [wallThickness, wallHeight/2, halfSize] },
-      { pos: [halfSize + wallThickness, wallHeight/2, 0], size: [wallThickness, wallHeight/2, halfSize] },
+      { pos: [0, wallHeight, -halfSize], size: [halfSize, wallHeight, wallThickness] },
+      { pos: [0, wallHeight, halfSize], size: [halfSize, wallHeight, wallThickness] },
+      { pos: [-halfSize, wallHeight, 0], size: [wallThickness, wallHeight, halfSize] },
+      { pos: [halfSize, wallHeight, 0], size: [wallThickness, wallHeight, halfSize] },
     ];
     
     walls.forEach(w => {
       const desc = RAPIER.ColliderDesc.cuboid(...w.size)
         .setTranslation(...w.pos)
-        .setFriction(0.2)
-        .setRestitution(0.4);
+        .setFriction(0.4)
+        .setRestitution(0.5);
       this.world.createCollider(desc);
     });
     
@@ -51,15 +58,14 @@ class RapierSlimePhysics {
   }
 
   _createSoftBody() {
-    const radius = 0.7;
-    const particleRadius = 0.12;
+    const radius = 0.55;
+    const particleRadius = 0.1;
     const layers = 4;
     const particlesPerLayer = 8;
     
-    // 创建粒子 - 球形分布
     for (let layer = 0; layer < layers; layer++) {
-      const y = 0.15 + layer * 0.15;
-      const layerRadius = radius * (1 - layer * 0.15);
+      const y = 0.2 + layer * 0.12;
+      const layerRadius = radius * (1 - layer * 0.2);
       const count = layer === layers - 1 ? 1 : particlesPerLayer;
       
       for (let i = 0; i < count; i++) {
@@ -69,24 +75,24 @@ class RapierSlimePhysics {
         
         const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
           .setTranslation(x, y, z)
-          .setLinearDamping(2.5)
-          .setAngularDamping(3.0);
+          .setLinearDamping(4.0)
+          .setAngularDamping(5.0);
         
         const body = this.world.createRigidBody(bodyDesc);
         
         const colliderDesc = RAPIER.ColliderDesc.ball(particleRadius)
-          .setFriction(0.4)
-          .setRestitution(0.3)
-          .setDensity(1.5);
+          .setFriction(0.5)
+          .setRestitution(0.4)
+          .setDensity(2.0);
         
         this.world.createCollider(colliderDesc, body);
         this.particles.push({ body, basePos: { x, y, z } });
       }
     }
     
-    // 创建弹簧约束连接所有粒子
-    const stiffness = 800;
-    const damping = 30;
+    // 弹簧约束 - 更柔软的连接
+    const stiffness = 400;
+    const damping = 20;
     
     for (let i = 0; i < this.particles.length; i++) {
       for (let j = i + 1; j < this.particles.length; j++) {
@@ -96,9 +102,9 @@ class RapierSlimePhysics {
           (pj.x - pi.x) ** 2 + (pj.y - pi.y) ** 2 + (pj.z - pi.z) ** 2
         );
         
-        if (dist < radius * 1.2) {
+        if (dist < radius * 1.5) {
           const jointData = RAPIER.JointData.spring(
-            dist * 0.95,
+            dist * 0.9,
             stiffness,
             damping,
             { x: 0, y: 0, z: 0 },
@@ -117,17 +123,20 @@ class RapierSlimePhysics {
     }
   }
 
-  setGravity(x, y, z) {
+  setTilt(tiltX, tiltZ) {
     if (this.world) {
-      this.gravity = { x, y, z };
-      this.world.gravity = { x, y, z };
+      // 倾斜盒子 = 改变重力方向，模拟盒子被倾斜
+      const gx = tiltX * this.baseGravity * 0.8;
+      const gz = tiltZ * this.baseGravity * 0.8;
+      const gy = -this.baseGravity;
+      this.world.gravity = { x: gx, y: gy, z: gz };
     }
   }
 
   applyForceAt(worldX, worldZ, strength) {
     if (!this.initialized) return;
     
-    this.interactionIntensity = Math.min(1, this.interactionIntensity + strength * 0.3);
+    this.interactionIntensity = Math.min(1, this.interactionIntensity + strength * 0.2);
     
     for (const p of this.particles) {
       const pos = p.body.translation();
@@ -135,12 +144,12 @@ class RapierSlimePhysics {
       const dz = pos.z - worldZ;
       const dist = Math.sqrt(dx * dx + dz * dz);
       
-      if (dist < 1.5) {
-        const factor = Math.pow(1 - dist / 1.5, 0.6) * strength;
+      if (dist < 1.2) {
+        const factor = Math.pow(1 - dist / 1.2, 0.5) * strength;
         
-        // 向下压 + 向外推
-        const forceY = -factor * 25;
-        const forceH = dist > 0.05 ? factor * 12 / dist : 0;
+        // 轻柔按压
+        const forceY = -factor * 3;
+        const forceH = dist > 0.05 ? factor * 1.5 / dist : 0;
         
         p.body.applyImpulse({ 
           x: dx * forceH, 
@@ -154,11 +163,10 @@ class RapierSlimePhysics {
   step(dt) {
     if (!this.initialized) return;
     
-    this.world.timestep = Math.min(dt, 0.02);
+    this.world.timestep = Math.min(dt, 0.016);
     this.world.step();
     
-    // 衰减交互强度
-    this.interactionIntensity *= 0.92;
+    this.interactionIntensity *= 0.9;
   }
 
   getPositions() {
@@ -634,13 +642,13 @@ export default function SlimeToyGame() {
     }
   }, [onUp, toWorld, prevent]);
 
-  // 陀螺仪
   const enableGyro = useCallback(async () => {
     const handler = (e) => {
       if (e.beta !== null && e.gamma !== null && physicsRef.current) {
-        const tiltX = (e.gamma / 30) * 20;
-        const tiltZ = (e.beta / 30) * 20;
-        physicsRef.current.setGravity(tiltX, -15, tiltZ);
+        // gamma: 左右倾斜 (-90 to 90), beta: 前后倾斜 (-180 to 180)
+        const tiltX = Math.max(-1, Math.min(1, e.gamma / 45));
+        const tiltZ = Math.max(-1, Math.min(1, (e.beta - 45) / 45));
+        physicsRef.current.setTilt(tiltX, tiltZ);
       }
     };
 
