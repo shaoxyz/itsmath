@@ -28,19 +28,19 @@ class SlimePhysics {
     this.tilt = { x: 0, z: 0 };
     
     this.config = {
-      surfaceStiffness: 35,
-      surfaceDamping: 3,
-      structureStiffness: 60,
-      structureDamping: 3,
-      volumeStiffness: 200,
+      surfaceStiffness: 25,
+      surfaceDamping: 2,
+      structureStiffness: 40,
+      structureDamping: 2,
+      volumeStiffness: 150,
       targetVolume: 0,
-      linearDamping: 0.96,
-      groundFriction: 0.82,
-      wallBounce: 0.5,
-      shapeRecovery: 0.06,
-      pressForce: 80,
-      pressRadius: 2.0,
-      gravity: -12,
+      linearDamping: 0.97,
+      groundFriction: 0.75,
+      wallBounce: 0.55,
+      shapeRecovery: 0.03,
+      pressForce: 100,
+      pressRadius: 2.2,
+      gravity: -15,
     };
     
     this.pressPoints = [];
@@ -141,7 +141,7 @@ class SlimePhysics {
   }
 
   setTilt(x, z) {
-    this.tilt = { x: x * 12, z: z * 12 };
+    this.tilt = { x: x * 25, z: z * 25 };
   }
 
   addPress(x, z, strength = 1) {
@@ -178,9 +178,9 @@ class SlimePhysics {
       // 重力
       p.vel.y += cfg.gravity * 0.001;
       
-      // 倾斜
-      p.vel.x += this.tilt.x * 0.0008;
-      p.vel.z += this.tilt.z * 0.0008;
+      // 倾斜 - 更强的响应，像液体流动
+      p.vel.x += this.tilt.x * 0.002;
+      p.vel.z += this.tilt.z * 0.002;
     }
     
     // 按压
