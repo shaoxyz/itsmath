@@ -1,6 +1,8 @@
 import { Routes, Route, Link } from 'react-router-dom'
 import MetaballGame from './games/MetaballGame'
+import SlimeToyGame from './games/SlimeToyGame'
 import MetaballThumbnail from './components/MetaballThumbnail'
+import SlimeToyThumbnail from './components/SlimeToyThumbnail'
 
 const games = [
   {
@@ -11,7 +13,14 @@ const games = [
     thumbnail: MetaballThumbnail,
     gradient: 'from-cyan-500 to-blue-600',
   },
-  // Add more games here
+  {
+    id: 'slime-toy',
+    name: 'Slime Tray',
+    description: '软体物理模拟史莱姆\n弹簧质点系统 + 体积守恒',
+    path: '/slime-toy',
+    thumbnail: SlimeToyThumbnail,
+    gradient: 'from-green-400 to-emerald-600',
+  },
 ]
 
 function HomePage() {
@@ -95,6 +104,14 @@ export default function App() {
         element={
           <GameWrapper title="Metaball">
             <MetaballGame />
+          </GameWrapper>
+        }
+      />
+      <Route
+        path="/slime-toy"
+        element={
+          <GameWrapper title="Slime Tray">
+            <SlimeToyGame />
           </GameWrapper>
         }
       />
